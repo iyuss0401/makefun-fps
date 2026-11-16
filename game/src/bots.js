@@ -28,7 +28,7 @@ let nextId = 1;
 export function createBot(team, spawn, colliders, shootables, difficulty = 1) {
   const mover = createMover(colliders);
   mover.self.position.set(spawn[0], 0, spawn[1]);
-  mover.self.yaw = team === 'attacker' ? Math.PI : 0;
+  mover.self.yaw = team === 'attacker' ? 0 : Math.PI;
 
   const group = new THREE.Group();
   const body = new THREE.Mesh(new THREE.CapsuleGeometry(0.32, 0.9, 6, 12), TEAM_COLORS[team]);
@@ -98,6 +98,7 @@ export function createBotBrain({ onKill, onImpact, onPlayerHit, shootables } = {
     viewDir.set(-Math.sin(bot.mover.self.yaw), 0, -Math.cos(bot.mover.self.yaw));
     toTarget.normalize();
     if (viewDir.dot(toTarget) < VIEW_DOT) return false;
+    if (enemy.isPlayer) return true;   // the player has no mesh; cones and range gate sight
     raycaster.set(eyePoint, toTarget);
     raycaster.far = distance - 0.3;
     const hits = raycaster.intersectObjects(botShootables, false);
@@ -125,7 +126,7 @@ export function createBotBrain({ onKill, onImpact, onPlayerHit, shootables } = {
       const sin = Math.sin(bot.mover.self.yaw);
       const cos = Math.cos(bot.mover.self.yaw);
       const nx = (dx * cos - dz * sin) / distance;   // local x
-      const nz = (dx * sin + dz * cos) / distance;   // local z (forward)
+      const nz = (-dx * sin - dz * cos) / distance;  // local z (forward)
       if (nz > 0.15) keys.add('KeyW');
       else if (nz < -0.15) keys.add('KeyS');
       if (nx > 0.15) keys.add('KeyD');

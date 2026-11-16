@@ -54,7 +54,7 @@ document.getElementById('game').appendChild(renderer.domElement);
 
 const scene = new THREE.Scene();
 scene.background = new THREE.Color(PALETTE.canvas);
-scene.fog = new THREE.Fog(new THREE.Color(PALETTE.canvas), 30, 78);
+scene.fog = new THREE.Fog(new THREE.Color('#1a2530'), 34, 90);
 const camera = new THREE.PerspectiveCamera(74, window.innerWidth / window.innerHeight, 0.05, 140);
 scene.add(camera);
 
@@ -318,7 +318,7 @@ function damageBot(bot, amount, point, headshot) {
   effects.blood(point);
   audio.flesh();
   if (bot.health > 0) return false;
-  killBot(bot, 0);
+  killBot(bot, elapsed);
   match.killFeed.push(`You ${headshot ? '◎' : '→'} ${bot.team === 'attacker' ? 'ATK' : 'DEF'} bot`);
   hud.killFeed(match.killFeed);
   match.money = Math.min(9000, match.money + KILL_REWARD);
@@ -526,7 +526,7 @@ function frame(now) {
     if (actions.switchTo === 2) { player.slot = 'secondary'; equipViewModel(); updateAmmoHud(); }
     if (actions.grenade === 1) throwGrenade('frag');
     if (actions.grenade === 2) throwGrenade('flash');
-    if (actions.plant && match.phase === 'live' && player.alive && inPlantZone()) {
+    if ((actions.plant || input.state.keys.has('KeyX')) && match.phase === 'live' && player.alive && inPlantZone()) {
       match.plantProgress += FIXED_STEP;
       hud.setProgress(true, match.plantProgress / PLANT_TIME);
       if (match.plantProgress >= PLANT_TIME) {
@@ -638,23 +638,40 @@ function runShot(name) {
     if (name === 'play') {
       const target = botEnemies.find((bot) => bot.alive);
       if (target) {
+        // Freeze the posed fight so the frame is composed: a bot mid-lane, hit sparks flying.
         target.mover.self.position.set(6, 0, -6);
+        target.group.position.set(6, 0, -6);
         target.state = 'engage';
         target.target = playerProxy;
+        // Give the player a rifle view model for the shot.
+        buy('rifle');
+        body.position.set(0.5, 0, 11);
         for (let round = 0; round < 4; round += 1) {
+          target.mover.self.position.set(6 + round * 0.15, 0, -6);
+          target.group.position.copy(target.mover.self.position);
           aimAt(new THREE.Vector3(target.mover.self.position.x, 1.3, target.mover.self.position.z));
           playerShoot();
           settle(7);
         }
+        // Posed reload so the readout shows a full mag; keep the hit effects fresh.
+        const w = currentWeapon();
+        if (w) { w.refill(); }
+        updateAmmoHud();
+        settle(2);
       }
-      aimAt(new THREE.Vector3(8.4, 1.5, -14));
-      settle(3);
+      aimAt(new THREE.Vector3(6, 1.4, -6));
+      settle(1);
     } else {
+      // End shot: spike planted on the site, defenders rotating, console glowing.
       plantDone();
       match.bombTimer = 12;
       body.position.set(2.5, 0, -6);
+      body.yaw = 0;
       aimAt(new THREE.Vector3(8.4, 1.6, -14));
-      settle(30);
+      settle(6);
+      // Clear the falling particles so the site reads cleanly, keep the bomb banner.
+      effects.step(2.5);
+      settle(1);
     }
   } else {
     body.position.set(1.5, 0, 15);
@@ -688,6 +705,39 @@ function paintTwiceThenReady() {
 let accumulator = 0;
 let lastTime = performance.now();
 let frozen = false;
+
+// A small debug handle: lets a test or a screenshot script advance the simulation without
+// waiting in real time, and read the match state. Never used by gameplay.
+window.__breach = {
+  match,
+  player,
+  bots,
+  mover,
+  shootables: SHOOTABLES,
+  scene,
+  throwGrenade,
+  buy,
+  beginLive,
+  playerShoot,
+  plant() {
+    if (match.phase === 'live' && player.alive && inPlantZone()) {
+      match.plantProgress = PLANT_TIME;
+      plantDone();
+    }
+    return { phase: match.phase, planted: match.planted };
+  },
+  fastForward(seconds) {
+    const steps = Math.min(60 * 180, Math.round(seconds / FIXED_STEP));
+    for (let i = 0; i < steps; i += 1) step(FIXED_STEP);
+    syncCamera();
+    hud.setHealth(player.health);
+    updateAmmoHud();
+    if (match.phase === 'live') {
+      const t = Math.max(0, match.timer);
+      hud.setTimer(`${Math.floor(t / 60)}:${String(Math.floor(t % 60)).padStart(2, '0')}`, t < 20);
+    }
+  },
+};
 
 syncCamera();
 startRound();

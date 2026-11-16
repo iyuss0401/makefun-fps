@@ -114,9 +114,9 @@ export function createWorld(scene) {
 
   // Light: dusk sky, a warm key sun low from the east, cool fill from the north, and amber
   // point lights that sell the glow strips without blooming.
-  scene.add(new THREE.HemisphereLight(new THREE.Color(PALETTE.surface), new THREE.Color(PALETTE.canvas), 0.85));
+  scene.add(new THREE.HemisphereLight(new THREE.Color('#4a5f7a'), new THREE.Color('#2a2118'), 1.35));
 
-  const key = new THREE.DirectionalLight(new THREE.Color(PALETTE.ink), 1.9);
+  const key = new THREE.DirectionalLight(new THREE.Color('#ffe6c4'), 2.6);
   key.position.set(14, 12, 6);
   key.target.position.set(0, 0, -4);
   key.castShadow = true;
@@ -127,18 +127,26 @@ export function createWorld(scene) {
   key.shadow.camera.bottom = -26;
   key.shadow.camera.far = 60;
   key.shadow.bias = -0.0006;
+  key.shadow.normalBias = 0.02;
   scene.add(key, key.target);
 
-  const fill = new THREE.DirectionalLight(new THREE.Color(PALETTE.muted), 0.5);
+  const fill = new THREE.DirectionalLight(new THREE.Color('#8fa6c8'), 0.95);
   fill.position.set(-9, 8, -12);
   scene.add(fill);
 
-  const siteLamp = new THREE.PointLight(new THREE.Color(PALETTE.accent), 24, 12, 1.8);
-  siteLamp.position.set(6, 3, -13);
+  const rim = new THREE.DirectionalLight(new THREE.Color('#f0a13c'), 0.7);
+  rim.position.set(-4, 6, 18);
+  scene.add(rim);
+
+  const siteLamp = new THREE.PointLight(new THREE.Color(PALETTE.accent), 40, 16, 1.7);
+  siteLamp.position.set(6, 3.2, -13);
   scene.add(siteLamp);
-  const midLamp = new THREE.PointLight(new THREE.Color(PALETTE.accent), 14, 10, 1.8);
-  midLamp.position.set(-9, 2.6, 1.4);
+  const midLamp = new THREE.PointLight(new THREE.Color(PALETTE.accent), 26, 14, 1.7);
+  midLamp.position.set(-9, 2.8, 1.4);
   scene.add(midLamp);
+  const spawnLamp = new THREE.PointLight(new THREE.Color('#7fb6d8'), 22, 14, 1.7);
+  spawnLamp.position.set(0, 3.2, 15);
+  scene.add(spawnLamp);
 
   // The objective: the payload console on the site (visual only; game logic owns the state).
   const pedestal = new THREE.Mesh(new THREE.CylinderGeometry(0.45, 0.6, 1.1, 12), materials.hairline);
